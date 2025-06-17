@@ -46,6 +46,19 @@ resource "aws_opensearch_domain" "search" {
   }
 }
 
+resource "aws_opensearch_domain_policy" "search" {
+  domain_name = aws_opensearch_domain.search.domain_name
+  access_policies = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = { AWS = aws_iam_role.lambda_role.arn },
+      Action = "es:*",
+      Resource = "${aws_opensearch_domain.search.arn}/*"
+    }]
+  })
+}
+
 resource "aws_cloudwatch_log_group" "lambda" {
   name = "/aws/lambda/${var.service_name}"
   retention_in_days = 14
@@ -89,6 +102,19 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         aws_dynamodb_table.inventory.arn,
         aws_dynamodb_table.orders.stream_arn
       ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_opensearch" {
+  name = "${var.service_name}-lambda-opensearch"
+  role = aws_iam_role.lambda_role.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = ["es:ESHttp*"],
+      Resource = "${aws_opensearch_domain.search.arn}/*"
     }]
   })
 }
