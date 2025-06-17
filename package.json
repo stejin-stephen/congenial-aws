@@ -1,0 +1,21 @@
+{
+  "name": "congenial-aws",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests specified\" && exit 0",
+    "zip:orders": "zip -r orders.zip dist node_modules package.json",
+    "zip:inventory": "zip -r inventory.zip dist node_modules package.json",
+    "zip:orders-stream": "zip -r orders-stream.zip dist node_modules package.json",
+    "package": "npm run build && npm run zip:orders && npm run zip:inventory && npm run zip:orders-stream"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.508.0",
+    "@opensearch-project/opensearch": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "@types/aws-lambda": "^8.10.110",
+    "@types/node": "^20.0.0"
+  }
+}
