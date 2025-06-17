@@ -136,7 +136,7 @@ resource "aws_apigatewayv2_route" "inventory" {
   target    = "integrations/${aws_apigatewayv2_integration.inventory.id}"
 }
 
-resource "aws_eventbridge_bus" "service_bus" {
+resource "aws_cloudwatch_event_bus" "service_bus" {
   name = "service-bus"
 }
 
@@ -144,19 +144,19 @@ resource "aws_lambda_permission" "orders_event" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.orders.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_eventbridge_bus.service_bus.arn
+  source_arn    = aws_cloudwatch_event_bus.service_bus.arn
 }
 
 resource "aws_lambda_permission" "inventory_event" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.inventory.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_eventbridge_bus.service_bus.arn
+  source_arn    = aws_cloudwatch_event_bus.service_bus.arn
 }
 
 resource "aws_cloudwatch_event_rule" "order_created" {
   name        = "OrderCreatedRule"
-  event_bus_name = aws_eventbridge_bus.service_bus.name
+  event_bus_name = aws_cloudwatch_event_bus.service_bus.name
   event_pattern = jsonencode({
     detail-type = ["OrderCreated"]
   })
@@ -164,14 +164,14 @@ resource "aws_cloudwatch_event_rule" "order_created" {
 
 resource "aws_cloudwatch_event_target" "order_created_inventory" {
   rule      = aws_cloudwatch_event_rule.order_created.name
-  event_bus_name = aws_eventbridge_bus.service_bus.name
+  event_bus_name = aws_cloudwatch_event_bus.service_bus.name
   target_id = "InventoryHandler"
   arn       = aws_lambda_function.inventory.arn
 }
 
 resource "aws_cloudwatch_event_rule" "stock_updated" {
   name        = "StockUpdatedRule"
-  event_bus_name = aws_eventbridge_bus.service_bus.name
+  event_bus_name = aws_cloudwatch_event_bus.service_bus.name
   event_pattern = jsonencode({
     detail-type = ["StockUpdated"]
   })
@@ -179,7 +179,7 @@ resource "aws_cloudwatch_event_rule" "stock_updated" {
 
 resource "aws_cloudwatch_event_target" "stock_updated_orders" {
   rule      = aws_cloudwatch_event_rule.stock_updated.name
-  event_bus_name = aws_eventbridge_bus.service_bus.name
+  event_bus_name = aws_cloudwatch_event_bus.service_bus.name
   target_id = "OrdersHandler"
   arn       = aws_lambda_function.orders.arn
 }
