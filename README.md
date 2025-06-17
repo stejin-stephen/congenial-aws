@@ -6,6 +6,10 @@ might wire up AWS services such as API Gateway, DynamoDB, OpenSearch
 (Amazon OpenSearch Service), AWS Lambda and EventBridge for communication.
 Deployment configuration is managed using Terraform.
 
+Orders are stored in DynamoDB via the orders command service. The table has
+streaming enabled so that a separate Lambda function keeps an OpenSearch index
+in sync. Queries can then use the search domain as the read model.
+
 ## Structure
 
 - `src/` – TypeScript source files
@@ -35,3 +39,7 @@ terraform apply
 
 This will create DynamoDB tables, Lambda functions, API Gateway resources,
 EventBridge bus and an OpenSearch domain.
+
+The stream-processing function expects the `OPENSEARCH_ENDPOINT` environment
+variable to point to the OpenSearch domain endpoint. Terraform sets this value
+automatically from the created domain.

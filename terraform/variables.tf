@@ -19,3 +19,8 @@ variable "inventory_zip" {
   description = "Path to inventory lambda zip"
   type        = string
 }
+
+variable "orders_stream_zip" {
+  description = "Path to orders stream lambda zip"
+  type        = string
+}

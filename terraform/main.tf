@@ -15,6 +15,8 @@ resource "aws_dynamodb_table" "orders" {
   name           = "orders"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "id"
+  stream_enabled = true
+  stream_view_type = "NEW_IMAGE"
   attribute {
     name = "id"
     type = "S"
@@ -68,6 +70,11 @@ resource "aws_lambda_function" "orders" {
   source_code_hash = filebase64sha256(var.orders_zip)
   role          = aws_iam_role.lambda_role.arn
   runtime       = "nodejs18.x"
+  environment {
+    variables = {
+      ORDERS_TABLE = aws_dynamodb_table.orders.name
+    }
+  }
 }
 
 resource "aws_lambda_function" "inventory" {
@@ -77,6 +84,27 @@ resource "aws_lambda_function" "inventory" {
   source_code_hash = filebase64sha256(var.inventory_zip)
   role          = aws_iam_role.lambda_role.arn
   runtime       = "nodejs18.x"
+}
+
+resource "aws_lambda_function" "orders_stream" {
+  function_name = "orders-stream-handler"
+  filename      = var.orders_stream_zip
+  handler       = "index.handler"
+  source_code_hash = filebase64sha256(var.orders_stream_zip)
+  role          = aws_iam_role.lambda_role.arn
+  runtime       = "nodejs18.x"
+  environment {
+    variables = {
+      ORDERS_INDEX        = "orders"
+      OPENSEARCH_ENDPOINT = aws_opensearch_domain.search.endpoint
+    }
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "orders_stream" {
+  event_source_arn = aws_dynamodb_table.orders.stream_arn
+  function_name    = aws_lambda_function.orders_stream.arn
+  starting_position = "LATEST"
 }
 
 resource "aws_apigatewayv2_api" "api" {
