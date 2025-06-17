@@ -23,6 +23,7 @@ in sync. Queries can then use the search domain as the read model.
 ```bash
 npm install        # install dependencies
 npm run build      # compile TypeScript
+npm run package    # build and create Lambda deployment zips
 npm test           # placeholder test script
 ```
 
@@ -34,7 +35,10 @@ Edit the variables in `terraform/variables.tf` as needed and run:
 cd terraform
 terraform init
 terraform plan
-terraform apply
+terraform apply \
+  -var="orders_zip=../orders.zip" \
+  -var="inventory_zip=../inventory.zip" \
+  -var="orders_stream_zip=../orders-stream.zip"
 ```
 
 This will create DynamoDB tables, Lambda functions, API Gateway resources,
