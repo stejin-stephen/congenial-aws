@@ -44,6 +44,10 @@ terraform apply \
 This will create DynamoDB tables, Lambda functions, API Gateway resources,
 EventBridge bus and an OpenSearch domain.
 
+The domain uses a `t3.small.search` instance type which requires EBS storage.
+Terraform configures a 10 GB gp3 volume by default, adjust `terraform/main.tf`
+if you need a different size or type.
+
 The stream-processing function expects the `OPENSEARCH_ENDPOINT` environment
 variable to point to the OpenSearch domain endpoint. Terraform sets this value
 automatically from the created domain.

@@ -2,7 +2,9 @@ export interface GetStockQuery {
   productId: string;
 }
 
+import { inventory } from '../../shared/database';
+
 export const getStock = async (q: GetStockQuery) => {
-  // TODO: Fetch from DynamoDB
-  return { id: q.productId, qty: 0 };
+  const qty = inventory.get(q.productId) ?? 0;
+  return { id: q.productId, qty };
 };
