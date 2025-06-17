@@ -96,10 +96,10 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_lambda_function" "orders" {
   function_name = "orders-handler"
   filename      = var.orders_zip
-  handler       = "index.handler"
+  handler       = "dist/orders/handler.handler"
   source_code_hash = filebase64sha256(var.orders_zip)
   role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs22.x"
   environment {
     variables = {
       ORDERS_TABLE = aws_dynamodb_table.orders.name
@@ -110,19 +110,19 @@ resource "aws_lambda_function" "orders" {
 resource "aws_lambda_function" "inventory" {
   function_name = "inventory-handler"
   filename      = var.inventory_zip
-  handler       = "index.handler"
+  handler       = "dist/inventory/handler.handler"
   source_code_hash = filebase64sha256(var.inventory_zip)
   role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs22.x"
 }
 
 resource "aws_lambda_function" "orders_stream" {
   function_name = "orders-stream-handler"
   filename      = var.orders_stream_zip
-  handler       = "index.handler"
+  handler       = "dist/orders/streams/syncToSearch.handler"
   source_code_hash = filebase64sha256(var.orders_stream_zip)
   role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs22.x"
   environment {
     variables = {
       ORDERS_INDEX        = "orders"
