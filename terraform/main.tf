@@ -96,10 +96,10 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_lambda_function" "orders" {
   function_name = "orders-handler"
   filename      = var.orders_zip
-  handler       = "index.handler"
+  handler       = "dist/orders/handler.handler"
   source_code_hash = filebase64sha256(var.orders_zip)
   role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs22.x"
   environment {
     variables = {
       ORDERS_TABLE = aws_dynamodb_table.orders.name
@@ -110,19 +110,19 @@ resource "aws_lambda_function" "orders" {
 resource "aws_lambda_function" "inventory" {
   function_name = "inventory-handler"
   filename      = var.inventory_zip
-  handler       = "index.handler"
+  handler       = "dist/inventory/handler.handler"
   source_code_hash = filebase64sha256(var.inventory_zip)
   role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs22.x"
 }
 
 resource "aws_lambda_function" "orders_stream" {
   function_name = "orders-stream-handler"
   filename      = var.orders_stream_zip
-  handler       = "index.handler"
+  handler       = "dist/orders/streams/syncToSearch.handler"
   source_code_hash = filebase64sha256(var.orders_stream_zip)
   role          = aws_iam_role.lambda_role.arn
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs22.x"
   environment {
     variables = {
       ORDERS_INDEX        = "orders"
@@ -137,33 +137,80 @@ resource "aws_lambda_event_source_mapping" "orders_stream" {
   starting_position = "LATEST"
 }
 
-resource "aws_apigatewayv2_api" "api" {
-  name          = "service-api"
-  protocol_type = "HTTP"
+resource "aws_api_gateway_rest_api" "api" {
+  name = "service-api"
 }
 
-resource "aws_apigatewayv2_integration" "orders" {
-  api_id           = aws_apigatewayv2_api.api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.orders.invoke_arn
+resource "aws_api_gateway_resource" "orders" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "orders"
 }
 
-resource "aws_apigatewayv2_route" "orders" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "POST /orders"
-  target    = "integrations/${aws_apigatewayv2_integration.orders.id}"
+resource "aws_api_gateway_method" "orders_post" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.orders.id
+  http_method   = "POST"
+  authorization = "NONE"
 }
 
-resource "aws_apigatewayv2_integration" "inventory" {
-  api_id           = aws_apigatewayv2_api.api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.inventory.invoke_arn
+resource "aws_api_gateway_integration" "orders_post" {
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.orders.id
+  http_method             = aws_api_gateway_method.orders_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.orders.invoke_arn
 }
 
-resource "aws_apigatewayv2_route" "inventory" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "POST /inventory"
-  target    = "integrations/${aws_apigatewayv2_integration.inventory.id}"
+resource "aws_lambda_permission" "orders_api" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.orders.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/POST/orders"
+}
+
+resource "aws_api_gateway_resource" "inventory" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "inventory"
+}
+
+resource "aws_api_gateway_method" "inventory_post" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.inventory.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "inventory_post" {
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.inventory.id
+  http_method             = aws_api_gateway_method.inventory_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.inventory.invoke_arn
+}
+
+resource "aws_lambda_permission" "inventory_api" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.inventory.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/POST/inventory"
+}
+
+resource "aws_api_gateway_deployment" "api" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  depends_on  = [
+    aws_api_gateway_integration.orders_post,
+    aws_api_gateway_integration.inventory_post
+  ]
+}
+
+resource "aws_api_gateway_stage" "prod" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  deployment_id = aws_api_gateway_deployment.api.id
+  stage_name = "prod"
 }
 
 resource "aws_cloudwatch_event_bus" "service_bus" {

@@ -42,7 +42,8 @@ terraform apply \
 ```
 
 This will create DynamoDB tables, Lambda functions, API Gateway resources,
-EventBridge bus and an OpenSearch domain.
+EventBridge bus and an OpenSearch domain. The API Gateway is a REST API with
+`POST` endpoints for `/orders` and `/inventory`.
 
 The domain uses a `t3.small.search` instance type which requires EBS storage.
 Terraform configures a 10 GB gp3 volume by default, adjust `terraform/main.tf`
