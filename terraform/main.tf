@@ -68,6 +68,31 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  name = "${var.service_name}-lambda-dynamodb"
+  role = aws_iam_role.lambda_role.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:DescribeStream",
+        "dynamodb:ListStreams"
+      ],
+      Resource = [
+        aws_dynamodb_table.orders.arn,
+        aws_dynamodb_table.inventory.arn,
+        aws_dynamodb_table.orders.stream_arn
+      ]
+    }]
+  })
+}
+
 resource "aws_lambda_function" "orders" {
   function_name = "orders-handler"
   filename      = var.orders_zip
