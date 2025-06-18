@@ -1,5 +1,5 @@
-import { publishEvent } from '../../shared/eventBus';
-import { inventory } from '../../shared/database';
+import { publishEvent } from '../../src/shared/eventBus';
+import { inventory } from '../../src/shared/database';
 
 export interface UpdateStockCommand {
   productId: string;

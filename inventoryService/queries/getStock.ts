@@ -2,7 +2,7 @@ export interface GetStockQuery {
   productId: string;
 }
 
-import { inventory } from '../../shared/database';
+import { inventory } from '../../src/shared/database';
 
 export const getStock = async (q: GetStockQuery) => {
   const qty = inventory.get(q.productId) ?? 0;
